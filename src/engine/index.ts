@@ -1,0 +1,6 @@
+export { Vim } from './vim'
+export type { Region } from './vim'
+export * from './types'
+export { parseKeys, keyFromEvent, keyLabel, keysToString, normalizeKey, NON_VIM_KEYS } from './keys'
+export { vimPatternToRegExp, escapeVimPattern } from './regex'
+export { matchesOnLine } from './motions'
