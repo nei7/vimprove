@@ -731,7 +731,7 @@ export class Vim {
     const op = cmd.operator!
     let region: Region
     if (cmd.textObject) {
-      const to = textObject(this.lines, this.cursor, cmd.textObject.inner, cmd.textObject.obj)
+      const to = textObject(this.lines, this.cursor, cmd.textObject.inner, cmd.textObject.obj, count)
       if (!to) {
         this.failCommand()
         return
@@ -1351,7 +1351,7 @@ export class Vim {
     const key = cmd.action?.key
     const vmode = this.mode
     if (cmd.textObject) {
-      const to = textObject(this.lines, this.cursor, cmd.textObject.inner, cmd.textObject.obj)
+      const to = textObject(this.lines, this.cursor, cmd.textObject.inner, cmd.textObject.obj, count)
       if (!to) return 'visual'
       let end = clonePos(to.end)
       let toEol = false

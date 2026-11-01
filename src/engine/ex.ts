@@ -106,10 +106,10 @@ function parseRange(vim: Vim, s: string): { range: LineRange | null; rest: strin
   }
   const a1 = parseAddress(vim, s, i)
   if (!a1.ok) return null
-  if (a1.line === null) return { range: null, rest: s.slice(a1.next) }
+  if (a1.line === null && s[a1.next] !== ',' && s[a1.next] !== ';') return { range: null, rest: s.slice(a1.next) }
   i = a1.next
-  let start = a1.line
-  let end = a1.line
+  let start = a1.line ?? vim.cursor.line
+  let end = start
   if (s[i] === ',' || s[i] === ';') {
     if (s[i] === ';') vim.cursor.line = Math.max(0, Math.min(last, start))
     const a2 = parseAddress(vim, s, i + 1)
@@ -213,6 +213,10 @@ export function executeEx(vim: Vim, input: string): void {
       name = 's'
       bang = false
       args = rest.slice(1)
+    } else if ((letters === 's' || letters === 'substitute') && m[2] === '!') {
+      name = letters
+      bang = false
+      args = '!' + m[3]
     } else if (/^(g|v)[a-zA-Z]/.test(letters) && !resolveCommand(letters) && !letters.startsWith('norm')) {
       name = letters[0]
       args = rest.slice(1)
@@ -587,7 +591,7 @@ function exGlobal(vim: Vim, range: LineRange, args: string, invert: boolean): vo
     vim.setMessage('E35: No previous regular expression', true)
     return
   }
-  const cmd = a.slice(p.next).trim() || 'p'
+  const cmd = a.slice(p.next).replace(/^\s+/, '') || 'p'
   const re = vim.compilePattern(pattern)
   if (!re) {
     vim.setMessage(`E383: Invalid search string: ${pattern}`, true)
@@ -605,12 +609,34 @@ function exGlobal(vim: Vim, range: LineRange, args: string, invert: boolean): vo
     vim.setMessage(`E486: Pattern not found: ${pattern}`, true)
     return
   }
-  const origLen = vim.lines.length
-  for (const idx of marked) {
-    const cur = idx + (vim.lines.length - origLen)
-    if (cur < 0 || cur >= vim.lines.length) continue
+  // Marked lines move around as commands run; track them by content near their expected position.
+  const pending = marked.map((idx) => ({ idx, text: vim.lines[idx] }))
+  let lenBefore = vim.lines.length
+  for (const item of pending) {
+    let cur = item.idx
+    if (vim.lines[cur] !== item.text) {
+      let best = -1
+      for (let d = 0; d < vim.lines.length; d++) {
+        const lo = cur - d
+        const hi = cur + d
+        if (hi < vim.lines.length && vim.lines[hi] === item.text) {
+          best = hi
+          break
+        }
+        if (lo >= 0 && vim.lines[lo] === item.text) {
+          best = lo
+          break
+        }
+        if (lo < 0 && hi >= vim.lines.length) break
+      }
+      if (best === -1) continue
+      cur = best
+    }
     vim.cursor = { line: cur, col: 0 }
     executeEx(vim, cmd)
+    const delta = vim.lines.length - lenBefore
+    lenBefore = vim.lines.length
+    for (const other of pending) if (other.idx > item.idx) other.idx += delta
   }
 }
 

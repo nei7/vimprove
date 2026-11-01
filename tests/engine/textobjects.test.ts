@@ -75,3 +75,11 @@ describe('paragraph & tag objects', () => {
     expect(edit('<br/><b>x|</b>', 'dit')).toBe('<br/><b>|</b>')
   })
 })
+
+describe('word objects with counts', () => {
+  test('d2aw d2iw', () => {
+    expect(edit('if (a && |b && c)', 'd2aw')).toBe('if (a && |c)')
+    expect(edit('foo |bar baz qux', 'd2iw')).toBe('foo |baz qux')
+    expect(edit('foo |bar baz qux', 'd3aw')).toBe('foo| ')
+  })
+})

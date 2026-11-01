@@ -10,8 +10,14 @@ export interface TextObjectRange {
   linewise?: boolean
 }
 
-/** iw / aw / iW / aW (count 1, within the current line) */
-export function wordObject(lines: string[], pos: Pos, inner: boolean, big: boolean): TextObjectRange | null {
+/** iw / aw / iW / aW within the current line. */
+export function wordObject(
+  lines: string[],
+  pos: Pos,
+  inner: boolean,
+  big: boolean,
+  count = 1,
+): TextObjectRange | null {
   const line = lines[pos.line]
   if (line.length === 0) return null
   const col = Math.min(pos.col, line.length - 1)
@@ -20,17 +26,30 @@ export function wordObject(lines: string[], pos: Pos, inner: boolean, big: boole
   let e = col
   while (s > 0 && charClass(line[s - 1], big) === c0) s--
   while (e + 1 < line.length && charClass(line[e + 1], big) === c0) e++
+  const extendRun = () => {
+    if (e + 1 >= line.length) return false
+    const c1 = charClass(line[e + 1], big)
+    e++
+    while (e + 1 < line.length && charClass(line[e + 1], big) === c1) e++
+    return true
+  }
   if (c0 === 0) {
-    if (!inner && e + 1 < line.length) {
-      const c1 = charClass(line[e + 1], big)
-      e++
-      while (e + 1 < line.length && charClass(line[e + 1], big) === c1) e++
-    }
+    if (!inner) extendRun()
   } else if (!inner) {
     if (e + 1 < line.length && isBlank(line[e + 1])) {
       while (e + 1 < line.length && isBlank(line[e + 1])) e++
     } else {
       while (s > 0 && isBlank(line[s - 1])) s--
+    }
+  }
+  for (let n = 1; n < count; n++) {
+    if (inner) {
+      if (!extendRun()) break
+    } else {
+      // another word plus its trailing white space
+      if (e + 1 < line.length && isBlank(line[e + 1])) extendRun()
+      if (!extendRun()) break
+      while (e + 1 < line.length && isBlank(line[e + 1])) e++
     }
   }
   return { start: { line: pos.line, col: s }, end: { line: pos.line, col: e } }
@@ -266,12 +285,18 @@ const BRACKETS: Record<string, [string, string]> = {
   '>': ['<', '>'],
 }
 
-export function textObject(lines: string[], pos: Pos, inner: boolean, obj: string): TextObjectRange | null {
+export function textObject(
+  lines: string[],
+  pos: Pos,
+  inner: boolean,
+  obj: string,
+  count = 1,
+): TextObjectRange | null {
   switch (obj) {
     case 'w':
-      return wordObject(lines, pos, inner, false)
+      return wordObject(lines, pos, inner, false, count)
     case 'W':
-      return wordObject(lines, pos, inner, true)
+      return wordObject(lines, pos, inner, true, count)
     case 's':
       return sentenceObject(lines, pos, inner)
     case 'p':

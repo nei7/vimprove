@@ -1,32 +1,68 @@
-# React + TypeScript + Vite
+# vimprove
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Daily Vim practice in the browser. Short, realistic editing tasks (rename an argument, delete a block, swap quote style, comment a column…) with a known optimal keystroke sequence, a coach that points out inefficient habits as you type, and spaced-repetition scheduling so the patterns stick.
 
-Currently, two official plugins are available:
+- **Real Vim semantics**: a from-scratch Vim emulator in TypeScript — normal / insert / replace / visual (char, line, block) / command-line modes, operators, motions, text objects, counts, registers, undo/redo, dot-repeat, macros, marks, Vim regex search and the common ex commands (`:s`, `:g`, `:m`, `:t`, `:d`, `:j`, `:norm`, `:sort`, `:set`).
+- **Par per task**: every task ships with one or more optimal solutions; the test suite replays each of them through the engine, so the par is always achievable.
+- **Coach**: rules detect `hhhh`, `xxxx`, `0i`, `$a`, `dw` followed by `i`, backspacing in insert mode, visual mode for simple edits, retyping a change instead of `.`, searching the word under the cursor instead of `*`, and more. Each hint names the better key.
+- **Daily loop**: due reviews first (intervals 1 → 3 → 7 → 14 → 30 → 60 days, driven by Perfect runs), then new material in a sensible order, then a drill for your most frequent recent habit. Streaks, an activity heat-map, per-topic mastery and lifetime habit stats.
+- **No backend**: progress lives in `localStorage`, with JSON export/import.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Run it
 
-## React Compiler
+```bash
+npm install
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Other scripts:
 
-## Expanding the Oxlint configuration
+```bash
+npm test            # engine + lesson validation tests (vitest)
+npm run typecheck   # tsc
+npm run lint        # oxlint
+npm run build       # production build in dist/
+npm run preview     # serve dist/
+```
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## Project layout
 
-```json
+```
+src/engine/      Vim emulator (pure TS, no React): parser, motions, text objects, operators, ex commands, regex
+src/lessons/     task catalogue (content/*.ts), cheat-sheet data, helpers (par, goal check)
+src/coach/       efficiency rules, analyzer, rating
+src/progress/    zustand store (localStorage), spaced repetition + daily plan scheduler
+src/components/  Editor, key stream, task panel, result modal, hints, heat-map
+src/pages/       Today, Practice, Playground, Library, Stats, Cheat sheet, Settings
+tests/           vitest suites; tests/lessons replays every optimal solution
+```
+
+## Adding a task
+
+Add an object to the matching file in `src/lessons/content/`:
+
+```ts
 {
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+  id: 'text-objects/change-inside-quotes',
+  title: 'Change a string',
+  category: 'text-objects',
+  difficulty: 1,
+  language: 'ts',
+  description: 'Change the greeting text to `Hi`.',
+  start: { text: 'const greeting = "Hello, world";', cursor: [0, 0] },
+  goal: { type: 'text', text: 'const greeting = "Hi";' },
+  optimal: ['ci"Hi<Esc>'],          // Vim notation; the shortest one is the par
+  teaches: ['ci"'],                 // ids from src/lessons/cheatsheet.ts
+  hints: ['ci" finds the next quoted string on the line.'],
 }
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+`npm test` fails if a solution does not reach the goal, if the start state already satisfies it, or if a `teaches` id is unknown.
+
+## Engine assumptions
+
+Behaves like Vim with `autoindent`, `expandtab`, `shiftwidth=2`, `startofline` and `wrapscan` on (tasks can override options). Every key press counts, including `<Esc>`, `<CR>` and control keys, as in VimGolf; a task is complete when the buffer matches the target in normal mode. Not emulated: folds, windows/buffers, `=`/`gq` formatting, the system clipboard (`"+` is an alias of the unnamed register), plugins.
+
+## Deploy
+
+`.github/workflows/deploy.yml` builds and publishes `dist/` to GitHub Pages on pushes to `main` (enable Pages → "GitHub Actions" in the repository settings). The app uses hash routing, so any static host works.
