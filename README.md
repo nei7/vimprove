@@ -65,4 +65,12 @@ Behaves like Vim with `autoindent`, `expandtab`, `shiftwidth=2`, `startofline` a
 
 ## Deploy
 
-`.github/workflows/deploy.yml` builds and publishes `dist/` to GitHub Pages on pushes to `main` (enable Pages → "GitHub Actions" in the repository settings). The app uses hash routing, so any static host works.
+The app uses hash routing, so any static host works.
+
+**Cloudflare Pages** (live at https://vimprove-b3a.pages.dev): `.github/workflows/cloudflare-pages.yml` deploys `dist/` on pushes to `main`; it needs the repository secrets `CLOUDFLARE_API_TOKEN` (Pages: Edit) and `CLOUDFLARE_ACCOUNT_ID`. To deploy by hand with the same variables in your environment:
+
+```bash
+npm run deploy:cf
+```
+
+**GitHub Pages**: `.github/workflows/deploy.yml` publishes `dist/` on pushes to `main` (enable Pages → "GitHub Actions" in the repository settings).

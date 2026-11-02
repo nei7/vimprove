@@ -11,7 +11,8 @@
     "lint": "oxlint",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"tests/**/*.ts\"",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "deploy:cf": "npm run build && npx wrangler@4 pages deploy dist --project-name vimprove --branch main"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
